@@ -1,0 +1,11 @@
+---
+- name: Create netns folder
+  file:
+    path: /var/run/netns
+    state: directory
+    mode: 0755
+
+- name: Create fake host netns
+  shell: |
+    screen -dmS skydive
+    screen -ls || true

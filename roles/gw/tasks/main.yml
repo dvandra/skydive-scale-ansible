@@ -1,0 +1,4 @@
+---
+- name: Add gw
+  shell: |
+    ip address add {{ underlay_gw_address }} dev br-int

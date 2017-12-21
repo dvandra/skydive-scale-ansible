@@ -1,0 +1,25 @@
+---
+- name: Install common packages
+  include_role:
+    name: common
+    tasks_from: package
+
+- name: Cleanup
+  include_role:
+    name: common
+    tasks_from: cleanup
+
+- name: Create mesh network
+  include_role:
+    name: common
+    tasks_from: mesh
+
+- name: Create screen session
+  include_role:
+    name: common
+    tasks_from: screen
+
+- name: Create fake host
+  include_role:
+    name: common
+    tasks_from: fake-host

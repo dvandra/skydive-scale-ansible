@@ -1,0 +1,42 @@
+---
+- openvswitch_bridge:
+    bridge: "{{ item }}"
+    state: absent
+  with_items:
+    - br-tun
+    - br-int
+
+- openvswitch_bridge:
+    bridge: "{{ item }}"
+  with_items:
+    - br-tun
+    - br-int
+
+- name: Set UP
+  shell: |
+    ip link set {{ item }} up
+  with_items:
+    - br-tun
+    - br-int
+
+- name: Set RSTP
+  shell: |
+    ovs-vsctl set bridge {{ item }} rstp_enable=true
+  with_items:
+    - br-tun
+
+- name: Patch port between br-int and br-tun
+  shell: |
+    ovs-vsctl add-port br-tun tun-int-patch
+    ovs-vsctl set interface tun-int-patch type=patch
+    ovs-vsctl add-port br-int int-tun-patch
+    ovs-vsctl set interface int-tun-patch type=patch
+    ovs-vsctl set interface tun-int-patch options:peer=int-tun-patch
+    ovs-vsctl set interface int-tun-patch options:peer=tun-int-patch
+
+- name: Create GRE tunnels
+  shell: |
+    ovs-vsctl add-port br-tun gre-{{ item.replace(".", "_") }} -- set interface gre-{{ item.replace(".", "_") }} type=gre options:remote_ip={{ item }}
+  with_items:
+    - "{{ groups['all'] }}"
+  when: inventory_hostname != item

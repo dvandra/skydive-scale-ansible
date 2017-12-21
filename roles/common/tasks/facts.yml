@@ -1,0 +1,14 @@
+---
+- name: Gather ipv4s
+  shell: |
+    {% for item in range(0, vhosts) %}
+    echo {{ underlay_cidr | ipaddr("net") | ipaddr(play_hosts.index(inventory_hostname) * vhosts + item + 1 + underlay_start) | ipaddr('address') }}
+    {% endfor %}
+  register: ipv4s
+
+- name: Gather names
+  shell: |
+    {% for item in range(0, vhosts) %}
+    echo sk-{{ skydive_role }}{{ play_hosts.index(inventory_hostname) * vhosts + item }}
+    {% endfor %}
+  register: names

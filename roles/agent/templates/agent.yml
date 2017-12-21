@@ -1,0 +1,79 @@
+host_id: sk-{{ skydive_role }}{{ play_hosts.index(inventory_hostname) * vhosts + item }}
+
+# WebSocket delay between two pings.
+# ws_ping_delay: 2
+# WebSocket Ping/Pong timeout in second.
+ws_pong_timeout: 15
+# maximum number of topology aggregated messages before sending
+# ws_bulk_maxmsgs: 100
+# duration in seconds before flushing topology aggregated messages
+# ws_bulk_maxdelay: 2
+# Maximum size of the message queue
+# ws_queue_size: 10000
+
+# list of analyzers used by analyzers and agents
+analyzers:
+{% for analyzer in groups['analyzers'] %}
+{% for ipv4 in hostvars[analyzer]["ipv4s"].stdout_lines %}
+  - {{ ipv4 }}:8082
+{% endfor %}
+{% endfor %}
+
+agent:
+  # address and port for the agent API, Format: addr:port.
+  # Default addr is 127.0.0.1
+  listen: 0.0.0.0:8081
+  # File path to X509 Certificate and Private Key to enable TLS communication
+  # Must be different than the analyzer and unique per agent (recommended)
+  # X509_cert: /etc/ssl/certs/agent.domain.com.crt
+  # X509_key:  /etc/ssl/certs/agent.domain.com.key
+  # Server name field specified in TLS communications.
+  # Not required, but can be used to allow virtual hosting
+  # X509_servername: domain.com
+  #
+  topology:
+    # Probes used to capture topology informations like interfaces,
+    # bridges, namespaces, etc...
+    # Available: ovsdb, docker, neutron, opencontrail
+    probes:
+      # - ovsdb
+      # - docker
+      # - neutron
+      # - opencontrail
+    netlink:
+      # delay in seconds between two metric updates
+      # metrics_update: 30
+  flow:
+    # Period in second to get capture stats from the probe. Note this
+    # currently only works for the pcap probe
+    # stats_update: 1
+
+ovs:
+  ovsdb: unix:///var/run/openvswitch/db.fake
+
+netns:
+  # allow to specify where the netns probe is watching network namespace
+  run_path: "{{ tmp }}/sk-{{ skydive_role }}{{ play_hosts.index(inventory_hostname) * vhosts + item }}/netns"
+
+logging:
+  level: INFO
+  backends:
+    - stderr
+  # - stdout
+  # - file
+  # - syslog
+  # configuration of the 'file' backend
+  # file:
+  #   path: /var/log/skydive.log
+  # configuration encoder could be for all backends or for specific one
+  # encoder: json
+  # color: false
+
+flow:
+  # Without any new packets, a flow expires after flow.expire
+  # seconds
+  expire: 600
+  # Seconds between flow updates (metrics, enhancements,...)
+  update: 60
+  # Protocol to use to send flows to the analyzer: websocket or udp
+  # protocol: udp

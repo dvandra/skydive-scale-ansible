@@ -1,0 +1,24 @@
+---
+- name: Create fake agent host
+  include_role:
+    name: common
+    tasks_from: main
+
+- name: Create agent conf
+  template:
+    src: "{{ role_path }}/templates/agent.yml"
+    dest: "{{ tmp }}/sk-{{ skydive_role }}{{ play_hosts.index(inventory_hostname) * vhosts + item }}/conf"
+  with_items: "{{ range(0, vhosts) | list }}"
+
+- name: Start agent
+  shell: |
+    {% set ns_host = "sk-" + skydive_role + (play_hosts.index(inventory_hostname) * vhosts + item)|string %}
+    {% set host_folder = tmp + "/sk-" + skydive_role + (play_hosts.index(inventory_hostname) * vhosts + item)|string %}
+
+    screen -S skydive -X screen -t skydive-agent {{ item }} ip netns exec {{ ns_host }} sh -c "/tmp/skydive-bin agent -c "{{ host_folder }}/conf/agent.yml" 2>&1 | tee {{ host_folder }}/log/skydive.log"
+  with_items: "{{ range(0, vhosts) | list }}"
+
+- name: Create fake vm
+  include_role:
+    name: common
+    tasks_from: fake-vm

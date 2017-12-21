@@ -1,0 +1,52 @@
+---
+- name: Create netns folder
+  file:
+    path: /var/run/netns
+    state: directory
+    mode: 0755
+
+- name: Create fake host netns
+  shell: |
+    {% for item in range(0, vhosts) %}
+
+    {% set ns_host = "sk-" + skydive_role + (play_hosts.index(inventory_hostname) * vhosts + item)|string %}
+
+    mkdir -p {{ tmp }}/{{ ns_host }}/netns
+    mkdir -p {{ tmp }}/{{ ns_host }}/conf
+    mkdir -p {{ tmp }}/{{ ns_host }}/log
+
+    ip netns add {{ ns_host }}
+    ip link add {{ ns_host }}-eth0 type veth peer name eth0 netns {{ ns_host }}
+    ip link set {{ ns_host }}-eth0 up
+    ip link set dev {{ ns_host }}-eth0 mtu 1400
+
+    ip netns exec {{ ns_host }} ip link set lo up
+    ip netns exec {{ ns_host }} ip link set eth0 up
+    ip netns exec {{ ns_host }} ip link set dev eth0 mtu 1400
+
+    {% set ipv4 = underlay_cidr | ipaddr("net") | ipaddr(play_hosts.index(inventory_hostname) * vhosts + item + 1 + underlay_start) %}
+
+    ip netns exec {{ ns_host }} ip address add {{ ipv4 }} dev eth0
+
+    ip netns exec {{ ns_host }} ip route add 0.0.0.0/0 via {{ underlay_gw }}
+
+    ovs-vsctl add-port br-int {{ ns_host }}-eth0
+
+    ip netns exec {{ ns_host }} brctl addbr br-vhost
+    ip netns exec {{ ns_host }} brctl stp br-vhost on
+    ip netns exec {{ ns_host }} ip link set br-vhost up
+
+    ip netns exec {{ ns_host }} ip link add vxlan0 type vxlan id 1 group 239.0.0.42 ttl 10 dev eth0
+    ip netns exec {{ ns_host }} ip link set up dev vxlan0
+
+    ip netns exec {{ ns_host }} brctl addif br-vhost vxlan0
+    {% endfor %}
+
+- name: Copy Skydive binary
+  copy:
+    src: "{{ skydive_path }}"
+    #dest: "{{ tmp }}/skydive"
+    dest: "/tmp/skydive-bin"
+    owner: root
+    group: root
+    mode: 0755

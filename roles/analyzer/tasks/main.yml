@@ -1,0 +1,19 @@
+---
+- name: Create fake host
+  include_role:
+    name: common
+    tasks_from: main
+
+- name: Create analyzer conf
+  template:
+    src: "{{ role_path }}/templates/analyzer.yml"
+    dest: "{{ tmp }}/sk-{{ skydive_role }}{{ play_hosts.index(inventory_hostname) * vhosts + item }}/conf"
+  with_items: "{{ range(0, vhosts) | list }}"
+
+- name: Start analyzer
+  shell: |
+    {% set ns_host = "sk-" + skydive_role + (play_hosts.index(inventory_hostname) * vhosts + item)|string %}
+    {% set host_folder = tmp + "/sk-" + skydive_role + (play_hosts.index(inventory_hostname) * vhosts + item)|string %}
+
+    screen -S skydive -X screen -t skydive-analyzer {{ item }} ip netns exec {{ ns_host }} sh -c "/tmp/skydive-bin analyzer -c "{{ host_folder }}/conf/analyzer.yml" 2>&1 | tee {{ host_folder }}/log/skydive.log"
+  with_items: "{{ range(0, vhosts) | list }}"

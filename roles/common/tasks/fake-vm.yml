@@ -1,0 +1,29 @@
+---
+- name: Create fake VM netns
+  shell: |
+    {% for vm in range(0, vms) %}
+
+    {% set ns_host = "sk-" + skydive_role + (play_hosts.index(inventory_hostname) * vhosts + item)|string %}
+
+    {% set vm_index = play_hosts.index(inventory_hostname) * vhosts * vms + item * vms + vm %}
+    {% set ns_vm = ns_host + "-vm" + vm_index|string %}
+
+    ip netns add {{ ns_vm }}
+    ln -s /var/run/netns/{{ ns_vm }} {{ tmp }}/{{ ns_host }}/netns/vm{{ vm_index }}
+
+    ip netns exec {{ ns_host }} ip link add vm{{ vm_index }}-eth0 type veth peer name eth0 netns {{ ns_vm }}
+
+    ip netns exec {{ ns_host }} ip link set vm{{ vm_index}}-eth0 up
+
+    ip netns exec {{ ns_vm }} ip link set lo up
+    ip netns exec {{ ns_vm }} ip link set eth0 up
+
+    {% set ipv4 = overlay_cidr | ipaddr("net") | ipaddr(vm_index + 1) %}
+
+    ip netns exec {{ ns_vm }} ip address add {{ ipv4 }} dev eth0
+
+    ip netns exec {{ ns_host }} brctl addif br-vhost vm{{ vm_index }}-eth0
+
+    {% endfor %}
+  with_items: "{{ range(0, vhosts) | list }}"
+  when: vms > 0

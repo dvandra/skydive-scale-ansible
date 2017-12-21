@@ -1,0 +1,30 @@
+---
+- name: Cleanup bridges
+  shell: |
+    ovs-vsctl --if-exists del-br {{ item }}
+  with_items:
+    - br-tun
+    - br-int
+
+- name: Clean old netns
+  shell: |
+    ls /var/run/netns/sk-* | while read NS; do ip netns del $( basename $NS ); done || true
+
+- name: Clean old intf
+  shell: |
+    {% for item in range(0, vhosts) %}
+
+    {% set ns_host = "sk-" + skydive_role + (play_hosts.index(inventory_hostname) * vhosts + item)|string %}
+
+    ip link del {{ ns_host }}-eth0 || true
+
+    {% endfor %}
+
+- name: Clean tmp folder
+  file:
+    state: absent
+    path: "{{ tmp }}/"
+
+- name: Destroy screen
+  shell: |
+    screen -S skydive -X quit || true

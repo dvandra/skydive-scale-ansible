@@ -1,0 +1,126 @@
+host_id: sk-{{ skydive_role }}{{ play_hosts.index(inventory_hostname) * vhosts + item }}
+
+# WebSocket delay between two pings.
+# ws_ping_delay: 2
+# WebSocket Ping/Pong timeout in second.
+ws_pong_timeout: 30
+# maximum number of topology aggregated messages before sending
+# ws_bulk_maxmsgs: 100
+# duration in seconds before flushing topology aggregated messages
+# ws_bulk_maxdelay: 2
+# Maximum size of the message queue
+# ws_queue_size: 10000
+
+analyzer:
+  # address and port for the analyzer API, Format: addr:port.
+  # Default addr is 127.0.0.1
+  listen: 0.0.0.0:8082
+  # File path to X509 Certificate and Private Key to enable TLS communication
+  # Must be different than the agent
+  # X509_cert: /etc/ssl/certs/analyzer.domain.com.crt
+  # X509_key:  /etc/ssl/certs/analyzer.domain.com.key
+  # topology_filter:
+  #   Namespaces: "g.V().Has('Type', 'netns').OutE().BothV()"
+  #   Layer2: "g.E().Has('RelationType', 'layer2')"
+
+  # Flow storage engine
+  # storage:
+      # Available: elasticsearch, orientdb
+      # backend: elasticsearch
+      # maximum number of flows aggregated between two data store inserts
+      # bulk_insert: 100
+      # deadline of each bulk insert in second
+      # bulk_insert_deadline: 5
+  topology:
+    # Define static interfaces and links updating Skydive topology
+    # Can be useful to define external resources like : TOR, Router, etc.
+    #
+    # A description language similar to the dot language is used to define
+    # interfaces and links. An arrow (->) is used to define a link between
+    # two interfaces (parent -> child). An arrow with a single dash will
+    # create an OwnerShip and a L2 link between the parent and the child.
+    # An arrow with two dashes (-->) will only create a L2 link between the
+    # parent and the child.
+    #
+    # Square brackets after the arrow is used to define additional metadata
+    # of the link (->[key=value,..]). Each interface described will be
+    # created in the topology excepted interfaces with the local prefix.
+    # In that specific case the interface of the local host will be used.
+    # Attributes of interfaces are declared using square brackets ([]).
+    # The following example creates a TOR node linked to TOR_PORT1 linked
+    # (l2 only) to TOR1_PORT1 linked to the TOR1 node, linked to TOR1_PORT2,
+    # which is linked to the local interface eth0, with an l2 only link.
+    fabric:
+{% set port = [0] %}
+{% for agent in groups['agents'] %}
+{% for name in hostvars[agent]["names"].stdout_lines %}
+      - TOR -> PORT{{ port|join('') }}
+      - PORT{{ port|join('') }} -> *[Type=host, Name={{ name }}]/eth0
+{% if port.append(port.pop() +1) %} {% endif %}
+{% endfor %}
+{% endfor %}
+
+# list of analyzers used by analyzers and agents
+analyzers:
+{% for analyzer in groups['analyzers'] %}
+{% for ipv4 in hostvars[analyzer]["ipv4s"].stdout_lines %}
+  - {{ ipv4 }}:8082
+{% endfor %}
+{% endfor %}
+
+storage:
+  elasticsearch:
+    host: 127.0.0.1:9200
+    # maxconns: 10
+    # retry: 60
+    # bulk_maxdocs: 100
+    # bulk_maxdelay: 5
+
+  # OrientDB connection informations
+  # orientdb:
+  #  addr: http://127.0.0.1:2480
+  #  database: Skydive
+  #  username: root
+  #  password: hello
+
+graph:
+  # graph backend memory, elasticsearch, orientdb
+  backend: memory
+
+logging:
+  level: INFO
+  backends:
+    - stderr
+  # - stdout
+  # - file
+  # - syslog
+  # configuration of the 'file' backend
+  # file:
+  #   path: /var/log/skydive.log
+  # configuration encoder could be for all backends or for specific one
+  # encoder: json
+  # color: false
+
+etcd:
+  # when 'embedded' is set to true, the analyzer will start an embedded etcd server
+  embedded: false
+  # listen: 0.0.0.0:12379
+
+  # both the analyzers and the agents make use of etcd
+  servers:
+   - {{ etcd_address }}
+
+  # client_timeout: 5
+
+  # maximum number of WAL and snapshot files. 0 means unlimited
+  # max_wal_files: 0
+  # max_snap_files: 0
+
+flow:
+  # Without any new packets, a flow expires after flow.expire
+  # seconds
+  expire: 600
+  # Seconds between flow updates (metrics, enhancements,...)
+  update: 60
+  # Protocol to use to send flows to the analyzer: websocket or udp
+  # protocol: udp
