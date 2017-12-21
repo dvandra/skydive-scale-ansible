@@ -1,11 +1,10 @@
 ---
-- name: Create netns folder
-  file:
-    path: /var/run/netns
-    state: directory
-    mode: 0755
+- name: Destroy screen
+  shell: |
+    screen -S skydive -X quit || true
+    pkill screen || true
 
-- name: Create fake host netns
+- name: Create screeen session
   shell: |
     screen -dmS skydive
     screen -ls || true

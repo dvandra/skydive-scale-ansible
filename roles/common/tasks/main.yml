@@ -9,15 +9,16 @@
     name: common
     tasks_from: cleanup
 
+- name: Create netns folder
+  file:
+    path: /var/run/netns
+    state: directory
+    mode: 0755
+
 - name: Create mesh network
   include_role:
     name: common
     tasks_from: mesh
-
-- name: Create screen session
-  include_role:
-    name: common
-    tasks_from: screen
 
 - name: Create fake host
   include_role:

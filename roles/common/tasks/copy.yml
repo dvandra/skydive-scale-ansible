@@ -1,0 +1,9 @@
+---
+- name: Copy Skydive binary
+  copy:
+    src: "{{ skydive_path }}"
+    #dest: "{{ tmp }}/skydive"
+    dest: "/tmp/skydive-bin"
+    owner: root
+    group: root
+    mode: 0755

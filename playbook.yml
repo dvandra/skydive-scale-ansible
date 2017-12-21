@@ -1,67 +1,45 @@
 ---
-- name: Prepare facts for analyzers
-  hosts: analyzers
+- name: Gather facts
+  hosts: all
   remote_user: root
   become: true
-  roles:
-  - all
-  vars:
-    skydive_role: al
-    vhosts: 1
-    underlay_cidr: "172.16.0.0/16"
-    underlay_start: 0
-
-- name: Prepare facts for agents
-  hosts: agents
-  remote_user: root
-  become: true
-  roles:
-  - all
-  vars:
-    skydive_role: ag
-    vhosts: 50
-    vms: 20
-    underlay_cidr: "172.16.0.0/16"
-    underlay_start: 300
+  tasks:
+    - include: "tasks/facts.yml"
 
 - name: Deploy host
   hosts: analyzers
   remote_user: root
   become: true
   roles:
-  - analyzer
-  vars:
-    skydive_role: al
-    vhosts: 1
-    tmp: "/tmp/skydive"
-    underlay_cidr: "172.16.0.0/16"
-    underlay_start: 0
-    underlay_gw: "172.16.254.254"
-    skydive_path: "/tmp/skydive-perf"
-    etcd_address: "http://10.41.20.10:2379"
+  - role: all
+    tags: infrastructure
 
 - name: Add gw
   hosts: gw
   remote_user: root
   become: true
   roles:
-  - gw
-  vars:
-    underlay_gw_address: "172.16.254.254/16"
+  - role: gw
+    tags: infrastructure
 
 - name: Deploy agents
   hosts: agents
   remote_user: root
   become: true
   roles:
+  - role: all
+    tags: infrastructure
+
+- name: Start analyzers
+  hosts: analyzers
+  remote_user: root
+  become: true
+  roles:
+  - analyzer
+
+- name: Start agents
+  hosts: agents
+  remote_user: root
+  become: true
+  roles:
   - agent
-  vars:
-    skydive_role: ag
-    vhosts: 50
-    vms: 20
-    tmp: "/tmp/skydive"
-    underlay_cidr: "172.16.0.0/16"
-    underlay_start: 300
-    underlay_gw: "172.16.254.254"
-    overlay_cidr: "10.0.0.0/8"
-    skydive_path: "/tmp/skydive-perf"

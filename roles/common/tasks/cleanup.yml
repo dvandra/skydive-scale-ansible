@@ -24,7 +24,3 @@
   file:
     state: absent
     path: "{{ tmp }}/"
-
-- name: Destroy screen
-  shell: |
-    screen -S skydive -X quit || true

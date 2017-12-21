@@ -1,14 +1,15 @@
 ---
-- name: Create fake host
-  include_role:
-    name: common
-    tasks_from: main
-
 - name: Create analyzer conf
   template:
     src: "{{ role_path }}/templates/analyzer.yml"
     dest: "{{ tmp }}/sk-{{ skydive_role }}{{ play_hosts.index(inventory_hostname) * vhosts + item }}/conf"
   with_items: "{{ range(0, vhosts) | list }}"
+  tags: configuration
+
+- name: Create screen session
+  include_role:
+    name: common
+    tasks_from: screen
 
 - name: Start analyzer
   shell: |

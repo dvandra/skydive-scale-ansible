@@ -1,5 +1,15 @@
 ---
-- name: Gather facts
+- name: Copy binary
   include_role:
     name: common
-    tasks_from: facts
+    tasks_from: copy
+
+- name: Create fake host
+  include_role:
+    name: common
+    tasks_from: main
+
+- name: Create fake vm
+  include_role:
+    name: common
+    tasks_from: fake-vm
